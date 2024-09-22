@@ -27,25 +27,25 @@ SELECT * FROM CUSTOMER_DETAILS;
 -- login snowsql
 snowsql
 
--- create pipe format
+-- Create pipe format
 CREATE OR REPLACE FILE FORMAT PIPE_FORMAT_CLI
 	type = 'CSV'
 	field_delimiter = '|'
 	skip_header = 1;
 	
--- create stage table
+-- Create a stage table
 CREATE OR REPLACE STAGE PIP_CLI_STAGE
 	file_format = PIP_FORMAT_CLI;	
 
 -- put data into stage
 put
-file://<url to>\customer_detail.csv
+file://C:\Users\QasimHassan\Downloads\snowflake_project\Data\customer_detail.csv
 @PIP_CLI_STAGE auto_compress=true;
 
--- list stage to see how many fiels are there
+-- list stage to see how many files are there
 list @PIP_CLI_STAGE;
 
--- resume warehouse, in case autoresume feature is OFF
+-- Resume warehouse, in case the auto-resume feature is OFF
 ALTER WAREHOUSE <name> RESUME;
 
 -- copy data from stage to table
@@ -54,11 +54,11 @@ COPY INTO CUSTOMER_DETAILS
 	file_format = (format_name = PIP_FORMAT_CLI)
 	on_error = 'skip_file';
 	
--- we can also give COPY command with pattern  if  your stage contain multiple  files
+-- We can also give a COPY command with the pattern  if  your stage contains multiple  files
 COPY INTO mycsvtable
 	FROM @mycsvstage
 	file_format = (format_name = PIP_FORMAT_CLI)
-	pattern = '.contain[1-5].csv.gz'
+	pattern = '*.contain[1-5].csv.gz'
 	on_error = 'skip_file';
 
 --===================================
@@ -66,7 +66,7 @@ COPY INTO mycsvtable
 --===================================
 
 -- tesla table
-CREATE OR REPLACE TABLE  TESLA_STOCKS(
+CREATE OR REPLACE TABLE TESLA_STOCKS(
     date DATE,
     open_value DOUBLE,
     high_vlaue DOUBLE,
@@ -132,12 +132,97 @@ LIST @S3_INTEGRATEION_BULK_COPY_TESLA_STOCKS;
 
 -- Need to give the snowflake ARN & ID
 
--- making sure table is empty
+-- Making sure the table is empty
 TRUNCATE TABLE TESLA_STOCKS;
 SELECT * FROM TESLA_STOCKS;
 
--- copy data using integration
+-- Copy data using integration
 COPY INTO TESLA_STOCKS FROM @S3_INTEGRATEION_BULK_COPY_TESLA_STOCKS;
 
 -- data should be there
 SELECT * FROM TESLA_STOCKS;
+
+--==============================
+-- Loading data using Snow Pipe
+--===============================
+
+-- 1. Stage the data
+-- 2. Test the copy command
+-- 3. Create pipe
+-- 4. Configure cloud event / call snow pipe rest API
+
+-- truncating data again
+TRUNCATE TABLE TESLA_STOCKS;
+
+-- dropping previously create integration & stage
+DROP STORAGE INTEGRATION S3_INTEGRATION;
+DROP STAGE S3_INTEGRATEION_BULK_COPY_TESLA_STOCKS;
+
+-- HELP: https://docs.snowflake.com/en/user-guide/data-load-s3-config-storage-integration
+-- Step 1: Configure access permissions (policy) for the S3 bucket
+-- Step 2: Create the IAM Role in AWS and attach above policy you created.
+
+-- Step 3: Create a Cloud Storage Integration in Snowflake
+CREATE OR REPLACE STORAGE INTEGRATION S3_TESLA_INTEGRATION
+  TYPE = EXTERNAL_STAGE
+  STORAGE_PROVIDER = 'S3'
+  ENABLED = TRUE
+  STORAGE_AWS_ROLE_ARN = '<role-arn>'
+  STORAGE_ALLOWED_LOCATIONS = ('s3://snowflake-demo-qh/input/');
+
+-- Step 4: Retrieve the AWS IAM User for your Snowflake Account
+DESC INTEGRATION S3_TESLA_INTEGRATION;
+
+-- Step 5: Grant the IAM User Permissions to Access Bucket Objects
+-- STORAGE_AWS_ROLE_ARN 
+-- STORAGE_AWS_EXTERNAL_ID
+
+-- Step 6: Create file format for external stage
+CREATE OR REPLACE FILE FORMAT S3_TESLA_STAGE_FORMAT
+    TYPE= 'CSV'
+    FIELD_DELIMITER=','
+    SKIP_HEADER=1;
+
+-- Step 6: Create an external stage using file format createbavove
+CREATE STAGE S3_TESLA_STAGE
+  STORAGE_INTEGRATION = S3_TESLA_INTEGRATION
+  URL = 's3://snowflake-demo-qh/input/'
+  FILE_FORMAT = S3_TESLA_STAGE_FORMAT;
+
+-- Step 7: Create a COPY Into Command
+-- HELP: https://docs.snowflake.com/en/user-guide/data-load-s3-copy
+
+COPY INTO TESLA_STOCKS FROM @S3_TESLA_STAGE;
+
+-- validating & dropping again for pip
+SELECT * FROM TESLA_STOCKS;
+TRUNCATE TABLE TESLA_STOCKS;
+
+--  Creating Pipe 
+CREATE OR REPLACE PIPE S3_TESLA_PIPE AUTO_INGEST=TRUE AS
+COPY INTO TESLA_STOCKS FROM @S3_TESLA_STAGE;
+
+-- Configure cloud event / call snow pipe rest API (S3_TESLA_EVENT_NOTICTATION)
+SHOW PIPES;
+
+-- Data should be there auotmatically
+SELECT * FROM TESLA_STOCKS;
+
+-- DROPPING PIPE
+DROP PIPE S3_TESLA_PIPE;
+
+
+----------------
+-- TIME TRAVEL
+----------------
+SELECT * FROM TESLA_STOCKS order by DATE desc;
+
+-- dropping & getting back the table (time travel)
+DROP TABLE TESLA_STOCKS;
+UNDROP TABLE TESLA_STOCKS;
+
+-- updating values
+UPDATE TESLA_STOCKS SET OPEN_VALUE=200 WHERE DATE = '2022-08-01';
+
+-- getting data beofre last upodate query
+SELECT * FROM TESLA_STOCKS BEFORE (statement => '01b73059-0002-f530-0000-fc77000146da') ORDER BY DATE DESC;
