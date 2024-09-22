@@ -1,6 +1,6 @@
 
 --======================
--- S3 read only policy
+ S3 read only policy
 --======================
 
 {
