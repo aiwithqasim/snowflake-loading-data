@@ -175,19 +175,10 @@ SELECT COUNT(*) FROM CUSTOMER_DETAILS;
 
 ### 🔑 Loading data into snowflake from S3 using Access/Private keys
 
-### 🔗 Loading data into snowflake from S3 using Storage Integration
-### ⚡ Loading Real-time data into snowflake using Snowpipe
-### 📊 Visualaizing the loadded data via AWS QuickSIght
-### 💰 Understanding pricing of Snowflake
-### ⏰ Time Travel in Snowflake
-### ⚙️ Performance optimization in Snowflake
-
-
-
-6) Load from S3 (simple external stage)
 - Upload the file to your S3 bucket and create an external stage or use credentials in the `CREATE STAGE` statement. Example (replace placeholders):
 
 ```sql
+-- creating table
 CREATE OR REPLACE TABLE TESLA_STOCKS(
 	date DATE,
 	open_value DOUBLE,
@@ -198,26 +189,32 @@ CREATE OR REPLACE TABLE TESLA_STOCKS(
 	volume BIGINT
 );
 
+-- creating stage
 CREATE OR REPLACE STAGE BULK_COPY_TESLA_STOCKS
 	URL = 's3://your-bucket/path/TSLA.csv'
 	CREDENTIALS = (AWS_KEY_ID='<access_key>', AWS_SECRET_KEY='<secret_key>');
 
+-- loading data
 COPY INTO TESLA_STOCKS
 	FROM @BULK_COPY_TESLA_STOCKS
 	FILE_FORMAT = (TYPE = 'CSV', FIELD_DELIMITER = ',', SKIP_HEADER = 1)
 	ON_ERROR = 'skip_file';
 
+-- verifying data
 SELECT COUNT(*) FROM TESLA_STOCKS;
 ```
 
-7) Use a Storage Integration (recommended for production)
+### 🔗 Loading data into snowflake from S3 using Storage Integration
+
 - Create an IAM role and grant access as shown in `snowflake intro.sql`, then create a storage integration in Snowflake and reference it when creating stages. Key commands:
 
 ```sql
+-- use high level of role
 USE ROLE ACCOUNTADMIN;
 GRANT CREATE INTEGRATION ON ACCOUNT TO SYSADMIN;
 USE ROLE SYSADMIN;
 
+-- creating S3 integration
 CREATE OR REPLACE STORAGE INTEGRATION S3_INTEGRATION
 	TYPE = EXTERNAL_STAGE
 	STORAGE_PROVIDER = 'S3'
@@ -225,18 +222,23 @@ CREATE OR REPLACE STORAGE INTEGRATION S3_INTEGRATION
 	ENABLED = TRUE
 	STORAGE_ALLOWED_LOCATIONS = ('s3://your-bucket-prefix/');
 
+-- grnating access to S3 integration
 GRANT USAGE ON INTEGRATION S3_INTEGRATION TO ROLE SYSADMIN;
 DESC INTEGRATION S3_INTEGRATION;
 
+-- creatning stage
 CREATE OR REPLACE STAGE S3_INTEGRATEION_BULK_COPY_TESLA_STOCKS
 	STORAGE_INTEGRATION = S3_INTEGRATION
 	URL = 's3://your-bucket-prefix/TSLA.csv'
 	FILE_FORMAT = (TYPE = 'CSV', FIELD_DELIMITER = ',', SKIP_HEADER = 1);
 
-COPY INTO TESLA_STOCKS FROM @S3_INTEGRATEION_BULK_COPY_TESLA_STOCKS;
+-- copying data
+COPY INTO TESLA_STOCKS 
+FROM @S3_INTEGRATEION_BULK_COPY_TESLA_STOCKS;
 ```
 
-8) Snowpipe (continuous ingestion)
+### ⚡ Loading Real-time data into snowflake using Snowpipe
+
 - High level steps from the repo:
 	- Stage the data.
 	- Test the `COPY` command.
@@ -246,28 +248,162 @@ COPY INTO TESLA_STOCKS FROM @S3_INTEGRATEION_BULK_COPY_TESLA_STOCKS;
 Example pipe creation:
 
 ```sql
-CREATE OR REPLACE PIPE S3_TESLA_PIPE AUTO_INGEST=TRUE AS
-	COPY INTO TESLA_STOCKS FROM @S3_TESLA_STAGE;
+CREATE OR REPLACE PIPE S3_TESLA_PIPE
+AUTO_INGEST=TRUE 
+AS
+COPY INTO TESLA_STOCKS FROM @S3_TESLA_STAGE;
+
 SHOW PIPES;
+
 SELECT * FROM TESLA_STOCKS;
+
 DROP PIPE S3_TESLA_PIPE;
 ```
 
-9) Time Travel and object recovery (examples from `snowflake intro.sql`)
+### 📊 Visualaizing the loadded data via AWS QuickSIght
+
+After loading data into Snowflake, you can visualize it using AWS QuickSight for business intelligence and analytics.
+
+- Set up QuickSight in your AWS account
+- Create a new data source and connect it to your Snowflake database
+- Use the Snowflake connector to authenticate with your Snowflake account
+- Select the database, schema, and tables you want to visualize
+
+Example query to use for visualization:
 
 ```sql
-SELECT * FROM TESLA_STOCKS ORDER BY DATE DESC;
-DROP TABLE TESLA_STOCKS;
-UNDROP TABLE TESLA_STOCKS;
-UPDATE TESLA_STOCKS SET OPEN_VALUE = 200 WHERE DATE = '2022-08-01';
-SELECT * FROM TESLA_STOCKS BEFORE (statement => '<statement-id>') ORDER BY DATE DESC;
+SELECT 
+	DATE,
+	OPEN_VALUE,
+	CLOSE_VLAUE,
+	HIGH_VLAUE,
+	LOW_VALUE,
+	VOLUME
+FROM TESLA_STOCKS
+ORDER BY DATE DESC;
 ```
 
-## Local files referenced
-- Sample data files are under `data/` (e.g., `data/customer_detail.csv`, `data/TSLA.csv`).
-- The main instruction script is `snowflake intro.sql` — you can run portions of it directly in Snowflake or with `snowsql`.
+Once connected, you can create:
+- Line charts for stock price trends
+- Bar charts for volume comparisons
+- Dashboards combining multiple visualizations
 
-## Next steps (optional)
-- I can prepare a ready-to-run SnowSQL script that uses workspace-local paths, or preview the CSVs in `data/` and run quick checks. Tell me which you'd like.
+### 💰 Understanding pricing of Snowflake
+
+Snowflake pricing is based on compute and storage consumption:
+
+**Compute Costs:**
+- Priced per Snowflake Credit (per second of warehouse usage)
+- Warehouse size determines credit consumption per second
+- XSMALL = 1 credit/second, SMALL = 2 credits/second, MEDIUM = 4 credits/second, etc.
+- You only pay for active warehouses; suspended warehouses don't incur compute charges
+
+**Storage Costs:**
+- Priced per TB of on-demand storage per month
+- Automatic compression reduces storage footprint
+- Time Travel and Fail-safe increase storage usage (additional fees apply)
+
+**Example cost estimation:**
+
+```
+If you run an XSMALL warehouse for 1 hour (3600 seconds):
+- 3600 seconds × 1 credit/second ÷ 3600 seconds/hour = 1 credit
+- At ~$4 per credit (varies by region and contract), cost = ~$4
+
+If you store 1 TB of data per month:
+- Cost = 1 TB × $40 per TB/month = ~$40 (varies by region)
+```
+
+Best practices to minimize costs:
+- Use AUTO_SUSPEND to pause warehouses during idle periods
+- Right-size your warehouse for your workload
+- Archive old data to S3 instead of keeping in Snowflake
+- Monitor usage with SNOWFLAKE.ACCOUNT_USAGE views
+
+### ⏰ Time Travel in Snowflake
+
+Time Travel allows you to access historical versions of tables and schemas at any point within a retention period (default 1 day, up to 90 days with Enterprise Edition).
+
+Example Time Travel queries:
+
+```sql
+-- View current state
+SELECT * FROM TESLA_STOCKS ORDER BY DATE DESC;
+
+-- Query as it was 1 hour ago
+SELECT * FROM TESLA_STOCKS AT(OFFSET => -3600) ORDER BY DATE DESC;
+
+-- Query as it was at a specific timestamp
+SELECT * FROM TESLA_STOCKS BEFORE(TIMESTAMP => '2022-08-01 10:00:00') ORDER BY DATE DESC;
+
+-- Query before a specific statement (DML operation)
+SELECT * FROM TESLA_STOCKS BEFORE (statement => '<statement-id>') ORDER BY DATE DESC;
+
+-- Recover a dropped table
+DROP TABLE TESLA_STOCKS;
+UNDROP TABLE TESLA_STOCKS;
+
+-- Undo an update
+UPDATE TESLA_STOCKS SET OPEN_VALUE = 200 WHERE DATE = '2022-08-01';
+-- Then query before the update to see old data
+SELECT * FROM TESLA_STOCKS BEFORE (statement => '<statement-id>') WHERE DATE = '2022-08-01';
+```
+
+Common use cases:
+- Recovering accidentally deleted data
+- Auditing data changes
+- Testing data transformations
+- Rolling back unintended updates
+
+### ⚙️ Performance optimization in Snowflake
+
+Optimize your Snowflake queries and warehouse usage for better performance and cost efficiency:
+
+**Warehouse Optimization:**
+- Choose appropriate warehouse size for your workload (start small, scale up if needed)
+- Use separate warehouses for different workloads (ETL, analytics, reporting)
+- Enable AUTO_SUSPEND to avoid paying for idle warehouses
+
+**Query Optimization:**
+- Use clustering on large tables (columns frequently filtered on)
+- Avoid SELECT * — query only needed columns
+- Use WHERE clauses to filter early in the query
+- Materialized views for frequently run aggregations
+
+Example optimized query:
+
+```sql
+-- Before: inefficient
+SELECT * FROM TESLA_STOCKS;
+
+-- After: optimized
+SELECT DATE, OPEN_VALUE, CLOSE_VLAUE, VOLUME 
+FROM TESLA_STOCKS 
+WHERE DATE >= '2022-08-01' 
+ORDER BY DATE DESC;
+```
+
+**Monitoring Performance:**
+
+```sql
+-- View query history and execution times
+SELECT QUERY_ID, QUERY_TEXT, EXECUTION_TIME, CREDITS_USED 
+FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY 
+WHERE EXECUTION_TIME > 60000 
+ORDER BY EXECUTION_TIME DESC 
+LIMIT 10;
+
+-- Check warehouse load
+SELECT WAREHOUSE_NAME, AVG_RUNNING_QUERIES, AVG_QUEUED_QUERIES 
+FROM SNOWFLAKE.ACCOUNT_USAGE.WAREHOUSE_LOAD_HISTORY 
+WHERE WAREHOUSE_NAME = 'COMPUTE_WH' 
+ORDER BY TIMESTAMP DESC;
+```
+
+Best practices:
+- Use EXPLAIN to understand query execution plans
+- Partition large tables by date or other logical keys
+- Keep statistics up-to-date (ANALYZE TABLE)
+- Monitor warehouse utilization regularly
 
 ---
