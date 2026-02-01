@@ -24,9 +24,27 @@ Objective of this project is to getting started in an handson way with snowflake
 - Services: Snowflake, SnowSQL, Amazon S3 (optional), QuickSight (optional)
 
 ## Contents
+
+```
+snowflake-loading-data/
+├── README.md                          # This file with all instructions and examples
+├── snowflake intro.sql                # Main SQL script with all examples
+├── s3 policy.txt                      # AWS S3 bucket policy template
+├── trust-policy.txt                   # AWS IAM trust policy template
+├── data/                              # Sample CSV files for loading
+│   ├── customer_detail.csv            # Customer data sample (pipe-delimited)
+│   ├── TSLA.csv                       # Tesla stock data sample
+│   └── TSLAmodified.csv               # Modified Tesla stock data
+└── img/                               # Images and diagrams
+	└── flow.png                       # Snowflake data loading flow diagram
+```
+
+**File Descriptions:**
 - `snowflake intro.sql` — example SQL and SnowSQL commands demonstrating table creation, stages, COPY, storage integration, Snowpipe and time travel.
-- `data/` — sample CSV files used by examples (e.g., `data/customer_detail.csv`, `data/TSLA.csv`).
-- `img/` — illustrative images.
+- `data/` — sample CSV files used by examples (e.g., `customer_detail.csv`, `TSLA.csv`).
+- `img/` — illustrative images showing the data loading flow.
+- `s3 policy.txt` — AWS S3 bucket policy to grant Snowflake access to your S3 bucket.
+- `trust-policy.txt` — AWS IAM trust policy for the Snowflake service role.
 
 ## Prerequisites
 - A Snowflake account with an active warehouse and appropriate roles/privileges.
