@@ -28,7 +28,7 @@ Objective of this project is to getting started in an handson way with snowflake
 ```
 snowflake-loading-data/
 ├── README.md                          # This file with all instructions and examples
-├── snowflake intro.sql                # Main SQL script with all examples
+├── snowflake-laoding.sql              # Main SQL script with all examples
 ├── s3 policy.txt                      # AWS S3 bucket policy template
 ├── trust-policy.txt                   # AWS IAM trust policy template
 ├── data/                              # Sample CSV files for loading
@@ -40,7 +40,7 @@ snowflake-loading-data/
 ```
 
 **File Descriptions:**
-- `snowflake intro.sql` — example SQL and SnowSQL commands demonstrating table creation, stages, COPY, storage integration, Snowpipe and time travel.
+-- `snowflake-laoding.sql` — example SQL and SnowSQL commands demonstrating table creation, stages, COPY, storage integration, Snowpipe and time travel.
 - `data/` — sample CSV files used by examples (e.g., `customer_detail.csv`, `TSLA.csv`).
 - `img/` — illustrative images showing the data loading flow.
 - `s3 policy.txt` — AWS S3 bucket policy to grant Snowflake access to your S3 bucket.
@@ -224,7 +224,7 @@ SELECT COUNT(*) FROM TESLA_STOCKS;
 
 ### 🔗 Loading data into snowflake from S3 using Storage Integration
 
-- Create an IAM role and grant access as shown in `snowflake intro.sql`, then create a storage integration in Snowflake and reference it when creating stages. Key commands:
+- Create an IAM role and grant access as shown in `snowflake-laoding.sql`, then create a storage integration in Snowflake and reference it when creating stages. Key commands:
 
 ```sql
 -- use high level of role
