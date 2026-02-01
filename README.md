@@ -12,7 +12,7 @@ Objective of this project is to getting started in an handson way with snowflake
 - Time Travel in Snowflake
 - Performance optimization in Snowflake
 
-Image: ![img-snowflake-loading](./img/flow.png)
+![img-snowflake-loading](./img/flow.png)
 
 ## Prerequisites
 - A Snowflake account with an active warehouse and appropriate roles/privileges.
@@ -35,7 +35,7 @@ Image: ![img-snowflake-loading](./img/flow.png)
 
 ## Getting started with Hands-on
 
-### Overview of Snowflake:
+### ❄️ Overview of Snowflake:
 
 Snowflake is a cloud-native data platform designed for scalable storage, compute separation, and elastic SQL processing. For data engineering use cases Snowflake is commonly used to ingest, transform, and serve data for analytics and downstream applications. Key ideas:
 
@@ -92,7 +92,7 @@ USE WAREHOUSE compute_wh;
 
 These small examples are safe to run in a development account; for production, replace passwords with secrets management and create more granular roles and resource monitors.
 
-### Loading data into snowflake using Web UI.
+### 🌐 Loading data into snowflake using Web UI
 
 Create the require table for laoding data into that table.
 
@@ -118,7 +118,7 @@ SELECT * FROM CUSTOMER_DETAILS;
 	- PIPE as seperator
 	- First file as header
 
-### Loading data into Snowflake using Snow CLI
+### ⌨️ Loading data into Snowflake using Snow CLI
 
 - Make sure to install Snow CLI using [https://sfc-repo.snowflakecomputing.com/snowflake-cli/index.html](https://sfc-repo.snowflakecomputing.com/snowflake-cli/index.html)
 
@@ -173,14 +173,14 @@ ON_ERROR='skip_file';
 SELECT COUNT(*) FROM CUSTOMER_DETAILS;
 ```
 
-### Loading data into snowflake from S3 using Access/Private keys
+### 🔑 Loading data into snowflake from S3 using Access/Private keys
 
-### Loading data into snowflake from S3 using Storage Integration
-### Loading Real-time data into snowflake using Snowpipe
-### Visualaizing the loadded data via AWS QuickSIght
-### Understanding pricing of Snowflake
-### Time Travel in Snowflake
-### Performance optimization in Snowflake
+### 🔗 Loading data into snowflake from S3 using Storage Integration
+### ⚡ Loading Real-time data into snowflake using Snowpipe
+### 📊 Visualaizing the loadded data via AWS QuickSIght
+### 💰 Understanding pricing of Snowflake
+### ⏰ Time Travel in Snowflake
+### ⚙️ Performance optimization in Snowflake
 
 
 
